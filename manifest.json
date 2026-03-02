@@ -1,0 +1,51 @@
+{
+  "manifest_version": "0.3",
+  "name": "ironscales-mcp",
+  "display_name": "Ironscales MCP Server",
+  "version": "1.0.0",
+  "description": "MCP server for Ironscales — phishing incident management, email classification, and remediation",
+  "long_description": "Provides Claude with tools to interact with the Ironscales API. Manage phishing incidents, classify suspicious emails, take remediation actions, view company security statistics, and manage sender allowlists.",
+  "author": {
+    "name": "Wyre Technology",
+    "url": "https://github.com/wyre-technology"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wyre-technology/ironscales-mcp"
+  },
+  "license": "MIT",
+  "keywords": ["ironscales", "phishing", "security", "email", "mcp"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "IRONSCALES_API_KEY": "${user_config.api_key}",
+        "IRONSCALES_COMPANY_ID": "${user_config.company_id}"
+      }
+    }
+  },
+  "tools_generated": true,
+  "user_config": {
+    "api_key": {
+      "type": "string",
+      "title": "Ironscales API Key",
+      "description": "Your Ironscales API key from the admin portal",
+      "required": true,
+      "sensitive": true
+    },
+    "company_id": {
+      "type": "string",
+      "title": "Company ID",
+      "description": "Your Ironscales company identifier",
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": { "node": ">=18.0.0" },
+    "claude_desktop": ">=0.10.0"
+  }
+}

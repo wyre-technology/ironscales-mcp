@@ -1,0 +1,32 @@
+name: ironscales-mcp
+region: nyc
+services:
+  - name: ironscales-mcp
+    github:
+      repo: wyre-technology/ironscales-mcp
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    routes:
+      - path: /
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 10
+      period_seconds: 30
+      timeout_seconds: 5
+    envs:
+      - key: MCP_TRANSPORT
+        value: http
+      - key: AUTH_MODE
+        value: gateway
+      - key: IRONSCALES_API_KEY
+        type: SECRET
+        scope: RUN_TIME
+      - key: IRONSCALES_COMPANY_ID
+        type: SECRET
+        scope: RUN_TIME
+      - key: LOG_LEVEL
+        value: info
