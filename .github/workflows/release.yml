@@ -106,6 +106,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm install -g @anthropic-ai/mcpb
       - run: npm run mcpb:pack
       - uses: softprops/action-gh-release@v2
         with:
