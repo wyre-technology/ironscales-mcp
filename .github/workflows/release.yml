@@ -89,11 +89,11 @@ jobs:
           context: .
           tags: |
             ghcr.io/${{ github.repository }}:latest
-            ghcr.io/${{ github.repository }}:v${{ steps.version.outputs.version }}
+            ghcr.io/${{ github.repository }}:v${{ needs.release.outputs.version }}
 
   mcpb:
     needs: [test, release]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.release.outputs.released == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -106,9 +106,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build
-      - run: npm install --production
-      - run: npx mcpb pack
+      - run: npm run mcpb:pack
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.release.outputs.version }}
