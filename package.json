@@ -1,6 +1,6 @@
 {
   "name": "@wyre-technology/ironscales-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for Ironscales — phishing incident management, email classification, and remediation",
   "type": "module",
   "main": "./dist/index.js",

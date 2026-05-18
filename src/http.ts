@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { createServer } from './server.js';
-import { getCredentials } from './utils/client.js';
 import { logger } from './utils/logger.js';
 
 const transports: Record<string, StreamableHTTPServerTransport> = {};
@@ -16,25 +15,19 @@ function startHttpServer(): void {
   const httpServer = createHttpServer(async (req, res) => {
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
-    // Health check — unauthenticated
-    if (url.pathname === '/health') {
-      const creds = getCredentials();
-      const statusCode = creds ? 200 : 503;
-      res.writeHead(statusCode, { 'Content-Type': 'application/json' });
-      res.end(
-        JSON.stringify({
-          status: creds ? 'ok' : 'degraded',
-          transport: 'http',
-          credentials: { configured: !!creds },
-          timestamp: new Date().toISOString(),
-        })
-      );
+    // Health check — shallow, unauthenticated, no upstream/credential checks.
+    // Must always return 200 so the ACA liveness probe does not kill the
+    // container in gateway mode (credentials are injected per-request, not
+    // at startup).
+    if (req.method === 'GET' && (url.pathname === '/health' || url.pathname === '/healthz')) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok' }));
       return;
     }
 
     if (url.pathname !== '/mcp') {
       res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Not found', endpoints: ['/mcp', '/health'] }));
+      res.end(JSON.stringify({ error: 'Not found', endpoints: ['/mcp', '/health', '/healthz'] }));
       return;
     }
 
