@@ -1,7 +1,7 @@
 import { createServer as createHttpServer } from 'node:http';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createServer } from './server.js';
-import { getCredentials, runWithCredentials } from './utils/client.js';
+import { runWithCredentials } from './utils/client.js';
 import { logger } from './utils/logger.js';
 
 function startHttpServer(): void {
@@ -17,8 +17,7 @@ function startHttpServer(): void {
     // container in gateway mode (credentials are injected per-request, not
     // at startup).
     if (req.method === 'GET' && (url.pathname === '/health' || url.pathname === '/healthz')) {
-      const creds = getCredentials();
-      res.writeHead(creds ? 200 : 200, { 'Content-Type': 'application/json' });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok' }));
       return;
     }
@@ -29,7 +28,22 @@ function startHttpServer(): void {
       return;
     }
 
-    // Gateway mode: extract credentials from injected headers
+    // Define the per-request handler once. Each request gets a fresh Server +
+    // stateless transport; request-scoped credentials (when present) are carried
+    // by AsyncLocalStorage, never process.env.
+    const handle = async () => {
+      const server = createServer();
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true,
+      });
+      res.on('close', () => { transport.close(); server.close(); });
+      await server.connect(transport);
+      await transport.handleRequest(req, res);
+    };
+
+    // Gateway mode: extract credentials from injected headers and run the
+    // request inside an AsyncLocalStorage credential context.
     if (isGatewayMode) {
       const apiKey = req.headers['x-ironscales-api-key'] as string | undefined;
       const companyId = req.headers['x-ironscales-company-id'] as string | undefined;
@@ -44,31 +58,9 @@ function startHttpServer(): void {
         return;
       }
 
-      const handle = async () => {
-        const server = createServer();
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-          enableJsonResponse: true,
-        });
-        res.on('close', () => { transport.close(); server.close(); });
-        await server.connect(transport);
-        await transport.handleRequest(req, res);
-      };
-
       await runWithCredentials({ apiKey, companyId }, handle);
       return;
     }
-
-    const handle = async () => {
-      const server = createServer();
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
-        enableJsonResponse: true,
-      });
-      res.on('close', () => { transport.close(); server.close(); });
-      await server.connect(transport);
-      await transport.handleRequest(req, res);
-    };
 
     await handle();
   });
