@@ -1,11 +1,8 @@
 import { createServer as createHttpServer } from 'node:http';
-import { randomUUID } from 'node:crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { createServer } from './server.js';
+import { getCredentials, runWithCredentials } from './utils/client.js';
 import { logger } from './utils/logger.js';
-
-const transports: Record<string, StreamableHTTPServerTransport> = {};
 
 function startHttpServer(): void {
   const port = parseInt(process.env.MCP_HTTP_PORT || '8080', 10);
@@ -20,7 +17,8 @@ function startHttpServer(): void {
     // container in gateway mode (credentials are injected per-request, not
     // at startup).
     if (req.method === 'GET' && (url.pathname === '/health' || url.pathname === '/healthz')) {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      const creds = getCredentials();
+      res.writeHead(creds ? 200 : 200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok' }));
       return;
     }
@@ -46,96 +44,37 @@ function startHttpServer(): void {
         return;
       }
 
-      // Inject into env so the client singleton picks them up
-      process.env.IRONSCALES_API_KEY = apiKey;
-      process.env.IRONSCALES_COMPANY_ID = companyId;
-    }
-
-    const sessionId = req.headers['mcp-session-id'] as string | undefined;
-
-    // POST — handle JSON-RPC messages
-    if (req.method === 'POST') {
-      const body = await readBody(req);
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(body);
-      } catch {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Invalid JSON' }));
-        return;
-      }
-
-      if (sessionId && transports[sessionId]) {
-        await transports[sessionId].handleRequest(req, res, parsed);
-        return;
-      }
-
-      if (!sessionId && isInitializeRequest(parsed)) {
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => randomUUID(),
-          enableJsonResponse: true,
-          onsessioninitialized: (sid) => {
-            transports[sid] = transport;
-          },
-        });
-        transport.onclose = () => {
-          const sid = transport.sessionId;
-          if (sid) delete transports[sid];
-        };
-
+      const handle = async () => {
         const server = createServer();
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+          enableJsonResponse: true,
+        });
+        res.on('close', () => { transport.close(); server.close(); });
         await server.connect(transport);
-        await transport.handleRequest(req, res, parsed);
-        return;
-      }
+        await transport.handleRequest(req, res);
+      };
 
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(
-        JSON.stringify({
-          jsonrpc: '2.0',
-          error: { code: -32000, message: 'Bad Request: missing or invalid session' },
-          id: null,
-        })
-      );
+      await runWithCredentials({ apiKey, companyId }, handle);
       return;
     }
 
-    // GET — SSE stream for server-initiated notifications
-    if (req.method === 'GET') {
-      if (!sessionId || !transports[sessionId]) {
-        res.writeHead(400, { 'Content-Type': 'text/plain' });
-        res.end('Invalid or missing session ID');
-        return;
-      }
-      await transports[sessionId].handleRequest(req, res);
-      return;
-    }
+    const handle = async () => {
+      const server = createServer();
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true,
+      });
+      res.on('close', () => { transport.close(); server.close(); });
+      await server.connect(transport);
+      await transport.handleRequest(req, res);
+    };
 
-    // DELETE — terminate session
-    if (req.method === 'DELETE') {
-      if (!sessionId || !transports[sessionId]) {
-        res.writeHead(400, { 'Content-Type': 'text/plain' });
-        res.end('Invalid or missing session ID');
-        return;
-      }
-      await transports[sessionId].handleRequest(req, res);
-      return;
-    }
-
-    res.writeHead(405).end();
+    await handle();
   });
 
   httpServer.listen(port, host, () => {
     logger.info(`Ironscales MCP HTTP streaming server listening on ${host}:${port}`);
-  });
-}
-
-function readBody(req: import('node:http').IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (chunk) => chunks.push(chunk as Buffer));
-    req.on('end', () => resolve(Buffer.concat(chunks).toString()));
-    req.on('error', reject);
   });
 }
 

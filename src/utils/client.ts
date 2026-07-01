@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { logger } from './logger.js';
 
 export interface IronscalesCredentials {
@@ -9,8 +10,23 @@ export interface IronscalesClient {
   request<T>(path: string, options?: RequestInit): Promise<T>;
 }
 
-let _client: IronscalesClientImpl | null = null;
-let _credentials: IronscalesCredentials | null = null;
+const credStore = new AsyncLocalStorage<IronscalesCredentials>();
+
+export function runWithCredentials<T>(creds: IronscalesCredentials, fn: () => T): T {
+  return credStore.run(creds, fn);
+}
+
+export function getCredentials(): IronscalesCredentials | null {
+  const scoped = credStore.getStore();
+  if (scoped?.apiKey && scoped?.companyId) return scoped;
+  const apiKey = process.env.IRONSCALES_API_KEY;
+  const companyId = process.env.IRONSCALES_COMPANY_ID;
+  if (!apiKey || !companyId) {
+    logger.warn('Missing Ironscales credentials', { hasApiKey: !!apiKey, hasCompanyId: !!companyId });
+    return null;
+  }
+  return { apiKey, companyId };
+}
 
 const BASE_URL = 'https://appapi.ironscales.com';
 
@@ -73,21 +89,6 @@ class IronscalesClientImpl implements IronscalesClient {
   }
 }
 
-export function getCredentials(): IronscalesCredentials | null {
-  const apiKey = process.env.IRONSCALES_API_KEY;
-  const companyId = process.env.IRONSCALES_COMPANY_ID;
-
-  if (!apiKey || !companyId) {
-    logger.warn('Missing Ironscales credentials', {
-      hasApiKey: !!apiKey,
-      hasCompanyId: !!companyId,
-    });
-    return null;
-  }
-
-  return { apiKey, companyId };
-}
-
 export async function getClient(): Promise<IronscalesClient> {
   const creds = getCredentials();
   if (!creds) {
@@ -95,21 +96,5 @@ export async function getClient(): Promise<IronscalesClient> {
       'Ironscales credentials not configured. Set IRONSCALES_API_KEY and IRONSCALES_COMPANY_ID.'
     );
   }
-
-  // Invalidate cache if credentials changed
-  if (
-    _client &&
-    _credentials &&
-    (creds.apiKey !== _credentials.apiKey || creds.companyId !== _credentials.companyId)
-  ) {
-    _client = null;
-  }
-
-  if (!_client) {
-    _client = new IronscalesClientImpl(creds);
-    _credentials = creds;
-    logger.info('Created Ironscales API client', { companyId: creds.companyId });
-  }
-
-  return _client;
+  return new IronscalesClientImpl(creds);
 }
