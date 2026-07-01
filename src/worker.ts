@@ -1,5 +1,6 @@
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { createServer } from './server.js';
+import { runWithCredentials } from './utils/client.js';
 
 interface Env {
   IRONSCALES_API_KEY: string;
@@ -28,17 +29,18 @@ export default {
       });
     }
 
-    // Inject credentials from Cloudflare secrets
-    process.env.IRONSCALES_API_KEY = env.IRONSCALES_API_KEY;
-    process.env.IRONSCALES_COMPANY_ID = env.IRONSCALES_COMPANY_ID;
-
-    // Stateless: one transport per request
-    const transport = new WebStandardStreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-    });
-
-    const server = createServer();
-    await server.connect(transport);
-    return transport.handleRequest(request);
+    // Run the request inside a request-scoped credential context — no
+    // process.env mutation. Cloudflare secrets are read from `env` per request.
+    return runWithCredentials(
+      { apiKey: env.IRONSCALES_API_KEY, companyId: env.IRONSCALES_COMPANY_ID },
+      async () => {
+        const transport = new WebStandardStreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+        });
+        const server = createServer();
+        await server.connect(transport);
+        return transport.handleRequest(request);
+      }
+    );
   },
 } satisfies ExportedHandler<Env>;
