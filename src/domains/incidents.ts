@@ -3,6 +3,7 @@ import type { DomainHandler, CallToolResult } from '../utils/types.js';
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import { getClient } from '../utils/client.js';
 import { logger } from '../utils/logger.js';
+import { buildIncidentCard, INCIDENT_CARD_META } from '../card.builder.js';
 
 function getTools(): Tool[] {
   return [
@@ -38,6 +39,7 @@ function getTools(): Tool[] {
       name: 'ironscales_incidents_get',
       description:
         'Get detailed information about a specific phishing incident by its ID, including affected recipients, email headers, threat indicators, and timeline.',
+      _meta: INCIDENT_CARD_META,
       inputSchema: {
         type: 'object' as const,
         properties: {
@@ -95,11 +97,24 @@ async function handleCall(
 
       const incident = await client.request<unknown>(`/api/v1/incidents/${encodeURIComponent(incidentId)}`);
 
+      // MCP Apps: attach the normalized card payload the ui:// incident card
+      // renders from. Best-effort — any failure just means no UI surface and
+      // the model-visible payload is served unchanged.
+      let payload: unknown = incident;
+      try {
+        if (incident && typeof incident === 'object' && !Array.isArray(incident)) {
+          const card = buildIncidentCard(incident as Record<string, unknown>);
+          if (card) payload = { ...(incident as Record<string, unknown>), _card: card };
+        }
+      } catch {
+        payload = incident;
+      }
+
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(incident, null, 2),
+            text: JSON.stringify(payload, null, 2),
           },
         ],
       };

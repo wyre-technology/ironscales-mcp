@@ -9,6 +9,17 @@ This is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) serve
 
 > **Part of the [MSP Claude Plugins](https://github.com/wyre-technology) ecosystem** — a growing suite of AI integrations for the MSP stack. Built by MSPs, for MSPs.
 
+## Interactive Incident Card (MCP Apps)
+
+`ironscales_incidents_get` renders as an interactive card in MCP Apps hosts
+(Claude Desktop/web) showing the phishing incident's subject, status, severity,
+sender, affected recipients, and threat indicators; plain-JSON behavior is
+unchanged in other hosts. The card is read-only — remediation stays with the
+model-driven remediation tools. It is neutral by default and brandable via
+`window.__BRAND__` injection or `MCP_BRAND_*` env vars (`MCP_BRAND_NAME`,
+`MCP_BRAND_LOGO_URL`, `MCP_BRAND_PRIMARY_COLOR`, `MCP_BRAND_ACCENT_COLOR`,
+`MCP_BRAND_BG`, `MCP_BRAND_TEXT`) — no rebuild needed.
+
 ## Installation
 
 ```bash
