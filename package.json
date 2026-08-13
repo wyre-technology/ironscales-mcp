@@ -19,7 +19,7 @@
     "cf:dev": "npm run build && wrangler dev"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.0"
+    "@modelcontextprotocol/sdk": "^1.30.0"
   },
   "devDependencies": {
     "@anthropic-ai/mcpb": "^2.1.0",
