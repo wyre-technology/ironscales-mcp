@@ -1,5 +1,5 @@
 {
-  "name": "@wyre-technology/ironscales-mcp",
+  "name": "@wyre-ai/ironscales-mcp",
   "version": "1.0.1",
   "description": "MCP server for Ironscales — phishing incident management, email classification, and remediation",
   "type": "module",
@@ -46,7 +46,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/wyre-technology/ironscales-mcp.git"
+    "url": "https://github.com/WYRE-AI/ironscales-mcp.git"
   },
   "license": "MIT",
   "publishConfig": {

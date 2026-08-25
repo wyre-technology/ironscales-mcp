@@ -3,7 +3,7 @@ region: nyc
 services:
   - name: ironscales-mcp
     github:
-      repo: wyre-technology/ironscales-mcp
+      repo: WYRE-AI/ironscales-mcp
       branch: main
       deploy_on_push: true
     dockerfile_path: Dockerfile
