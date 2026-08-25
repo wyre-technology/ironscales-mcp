@@ -7,7 +7,7 @@ A Model Context Protocol (MCP) server for Ironscales email security. Enables AI 
 
 This is a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that connects Claude (or any MCP-compatible AI) to your Ironscales environment.
 
-> **Part of the [MSP Claude Plugins](https://github.com/wyre-technology) ecosystem** — a growing suite of AI integrations for the MSP stack. Built by MSPs, for MSPs.
+> **Part of the [MSP Claude Plugins](https://github.com/WYRE-AI) ecosystem** — a growing suite of AI integrations for the MSP stack. Built by MSPs, for MSPs.
 
 ## Interactive Incident Card (MCP Apps)
 
@@ -23,7 +23,7 @@ model-driven remediation tools. It is neutral by default and brandable via
 ## Installation
 
 ```bash
-npm install @wyre-technology/ironscales-mcp
+npm install @wyre-ai/ironscales-mcp
 ```
 
 ## Configuration
@@ -47,7 +47,7 @@ Add to your Claude Desktop `claude_desktop_config.json`:
   "mcpServers": {
     "ironscales-mcp": {
       "command": "npx",
-      "args": ["@wyre-technology/ironscales-mcp"],
+      "args": ["@wyre-ai/ironscales-mcp"],
       "env": {
         "IRONSCALES_API_KEY": "your-ironscales-api-key"
         "IRONSCALES_COMPANY_ID": "your-ironscales-company-id"
@@ -63,7 +63,7 @@ Add to your Claude Desktop `claude_desktop_config.json`:
 claude mcp add ironscales-mcp \
   -e IRONSCALES_API_KEY=your-value \
   -e IRONSCALES_COMPANY_ID=your-value \
-  -- npx -y @wyre-technology/ironscales-mcp
+  -- npx -y @wyre-ai/ironscales-mcp
 ```
 
 ### Docker
@@ -98,7 +98,7 @@ Security statistics and reporting
 
 ```bash
 # Clone the repository
-git clone https://github.com/wyre-technology/ironscales-mcp.git
+git clone https://github.com/WYRE-AI/ironscales-mcp.git
 cd ironscales-mcp
 
 # Install dependencies
